@@ -1,21 +1,19 @@
-from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from starlette.websockets import WebSocketDisconnect
-from starlette.responses import StreamingResponse
 import asyncio
 import queue
-
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, WebSocket
+from starlette.responses import StreamingResponse
+from starlette.websockets import WebSocketDisconnect
 # FRACTAL core
+from core.msg_queues.response_dispatcher import ResponseDispatcher
+from core.msg_queues.response_receiver import ResponseReceiver
+from core.socket.fractal_client import FractalClient
+from core.socket.fractal_reader import FractalReader
 from core.detection.camera import VideoCamera
 from core.debug_tools.timer import Timer
 from core.debug_tools.fps import FPS
-from core.msg_queues.response_dispatcher import ResponseDispatcher
-from core.msg_queues.response_receiver import ResponseReceiver
-# FRACTAL SOCKET core
-from core.socket.fractal_client import FractalClient
-from core.socket.fractal_reader import FractalReader
 
 # SERVER SETTINGS
 app = FastAPI()
