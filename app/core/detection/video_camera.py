@@ -54,6 +54,9 @@ class VideoCamera():
         return self.main_frame[int(y_min):int(y_max), int(x_min):int(x_max)]
 
 
+    def test(self):
+        print("ok")
+
 # TESTING
 if __name__ == "__main__":
     pass

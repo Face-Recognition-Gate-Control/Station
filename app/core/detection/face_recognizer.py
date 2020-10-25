@@ -1,5 +1,7 @@
-from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
-from vision.ssd.config.fd_config import define_img_size
+# from .vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
+# from .vision.ssd.config.fd_config import define_img_size
+from .vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
+from .vision.ssd.config.fd_config import define_img_size
 import torch
 
 
@@ -92,3 +94,9 @@ class FaceRecognizer():
             image_size ([int]): [image x-length]
         """
         define_img_size(image_size)
+
+
+
+if __name__ == "__main__":
+    
+    print(create_Mb_Tiny_RFB_fd_predictor)

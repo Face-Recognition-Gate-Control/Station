@@ -1,10 +1,10 @@
 # !/usr/bin/python3
 # -*- coding: utf-8 -*-
-from classes.face_embedder import FaceEmbedder
-from classes.face_recognizer import FaceRecognizer
-from classes.video_camera import VideoCamera
-from classes.video_canvas import VideoCanvas
-from utils.data import compare_embeddings, load_embeddings_to_dict
+from core.detection.face_embedder import FaceEmbedder
+from core.detection.face_recognizer import FaceRecognizer
+from core.detection.video_camera import VideoCamera
+from core.detection.video_canvas import VideoCanvas
+from core.utils.data import compare_embeddings, load_embeddings_to_dict
 import numpy as np
 import torch
 import time
@@ -15,16 +15,16 @@ import os
 # TODO: (Idea) Create Dataloader?
 
 # TODO: Where to place this?
-PATH_TO_FACE_DETECTION_MODEL = "./assets/models/RFB-640/face_model.pth"
+PATH_TO_FACE_DETECTION_MODEL = "./static/models/RFB-640/face_model.pth"
 
 # TODO: Where to place this?
 # TODO: import local weigths into Embedd-model (be careful inside ML-modules)
-PATH_TO_FACE_EMBEDDING_MODEL = "./assets/models/InceptionResnetV1/vggface2.pth"
+PATH_TO_FACE_EMBEDDING_MODEL = "./static/models/InceptionResnetV1/vggface2.pth"
 
 # TODO: Where to place this?
-PATH_TO_ANCHORS = "assets/images/test_embeddings"
-PATH_TO_IMAGES = "assets/images/test_images"
-PATH_TO_CROPS = "assets/images/test_crops"
+PATH_TO_ANCHORS = "static/images/test_embeddings"
+PATH_TO_IMAGES = "static/images/test_images"
+PATH_TO_CROPS = "static/images/test_crops"
 
 if __name__ == "__main__":
 
