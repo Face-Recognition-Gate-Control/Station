@@ -1,6 +1,14 @@
 import numpy as np
 import cv2
 
+WINDOW_TITLE = "FACIAL RECOGNITION SOFTWARE"
+TEXT_FONT = cv2.FONT_HERSHEY_SIMPLEX
+GRN_COLOR = (0, 255, 0)  #   GREEN = VALID
+RED_COLOR = (0, 0, 255)  # RED = NON VALID
+
+LINE_THICKNESS = 2       # px
+TEXT_SCALE = 1           # px
+PADDING = 30             # px
 
 class VideoCamera():
     """
@@ -53,10 +61,52 @@ class VideoCamera():
         x_min, y_min, x_max, y_max = crop
         return self.main_frame[int(y_min):int(y_max), int(x_min):int(x_max)]
 
+    @staticmethod
+    def draw_rectangle(frame, coords):
+        """Used to display an rectangle onto the a given frame to the window.
+        Args:
+            frame ([numpy.ndarray]): [the frame to draw the rectangle onto]
+            coords ([list]): [list of min/max set points]
+        """
+        return cv2.rectangle(frame, (int(coords[0]), int(coords[1])),  (int(coords[2]), int(coords[3])),
+                      VideoCamera.get_color(coords), LINE_THICKNESS)
 
-    def test(self):
-        print("ok")
+    @staticmethod
+    def valid_size(coords):
+        """ format: xmin, ymin, xmax, ymax """
+        WIDTH_REQUIRED  = 130
+        HEIGTH_REQUIRED = 190
+        WIDTH_TEST = coords[2] - coords[0]
+        HEIGTH_TEST = coords[3] - coords[1]
+        if (WIDTH_TEST > WIDTH_REQUIRED):
+            if(HEIGTH_TEST > HEIGTH_REQUIRED):
+                return True
+        return False
+
+    @staticmethod
+    def get_color(frame):
+        if VideoCamera.valid_size(frame):
+            return GRN_COLOR
+        return RED_COLOR
 
 # TESTING
 if __name__ == "__main__":
-    pass
+
+    cap = cv2.VideoCapture(1)
+
+    while(True):
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+
+        # Our operations on the frame come here
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Display the resulting frame
+        cv2.imshow('frame',gray)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # When everything done, release the capture
+    cap.release()
+    cv2.destroyAllWindows()
+

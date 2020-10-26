@@ -1,3 +1,7 @@
+from core.debug_tools.timer import Timer
+from core.detection.camera import VideoCamera
+import cv2
+import torch
 
 """ MODELS """
 face_detector = None
@@ -33,38 +37,61 @@ Impl func:
 -       save different sizes?
 """
 
+S_INIT = "INIT"
+S_SCANNING = "SCANNING"
+S_VALIDATING = "VALIDATING"
+S_ACCESS = "ACCESS"
+
+current_state = {"state": S_SCANNING}
+
+msg_from_server = False
+
+
 def pseudo_camera_loop():
-    """
-    Responseibility:
-    
-    Read information from the camera and act accordingly.
-    This means, either:
-                        Find Face
-                        Save Face
-                        Make Face-embedding.
-    
-    """    
+    response_timer = Timer(5)    # answer from server
+    camera_timer = Timer(3)      # before taking picture of user
+    global current_state
     while True:
 
         frame = cam.get_frame()
         face_boxes = face_detector.predict_faces(frame)
-
+        
+           
         for face_box in face_boxes:
-            if VALIDATE_FACE:
-                if valid_face_size(face_box):
-                    cam_timer.start()
-                    if cam_timer.is_expired():
+            
+            current_state = current_state["state"]
+            
+            if current_state == "SCANNING":
+                recv_que.add_repsonse({"state": "SCANNING"})
+                current_state = "VALIDATING"
+            
+            if current_state == "VALIDATING":
+                if VideoCamera.valid_size(face_box):
+                    camera_timer.start()
+                    if camera_timer.is_expired():
                         face = cam.get_roi(face_box)
-                        cv2.imwrite("./tmp/face.jpg", face)
+                        cv2.imwrite("./tmp/imgs/face.jpg", face)
                         embedding = face_embedder.frame_to_embedding(face)
                         disp_que.add_response({
                             "response_name": "user_authorization",
-                            "embedding": embedding
+                            "embedding": embedding.tolist()
                         })
-                        start_confirmation_timer_from_server()
+                        camera_timer.stop()
+                        current_state = "ACCESS"
                 else:
-                    cam_timer.stop()
-
+                    camera_timer.stop()
+            
+            if current_state == "ACCESS":
+                response_timer.start()
+                if response_timer.is_expired():
+                    if not msg_from_server:
+                        # REMOVE STUFF FROM TEMP FOLDER AND RESET??
+                        current_state = "SCANNING"
+                        response_timer.stop()
+                    else:
+                        # WAIT FOR USER TO ENTER GATE??
+                        
+        
             if SHOW_FACE_BOX:
                 frame = VideoCamera.draw_rectangle(frame, face_box)
                 
@@ -85,11 +112,31 @@ async def pseudo_websocket_loop():
     """   
     websocket = None 
     while True:
-    
-        msg = recv_que.get_response()
         
-        await websocket.send_json({
-            "msg": msg
-        })
+        data = {}
+        response = recv_que.get_response()
+        state = response["state"]
+        
+        if state == "SCANNING":
+            data = {
+                "state": "SCANNING"
+            }
+            
+        if state == "VALIDATION":
+            data = {
+                "state": "VALIDATION",
+                "access_granted": True,
+                "thumbnail_path": response["data"]["thumbnail_path"]
+            }
+            
+        if state == "ACCESS":
+            data = {
+                "state": "ACCESS",
+                "access_granted": False,
+                "qr_path": response["data"]["qr_path"]
+            }
+            
+        await websocket.send_json(data)
         recv_que.confirm_sent()
+
 

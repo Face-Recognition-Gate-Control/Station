@@ -20,6 +20,7 @@ class FaceEmbedder():
             and sets up the foundation for the hidden layers.
         """
         self.torch_device = self._create_and_get_device()
+        print(self.torch_device)
         self.face_embedder = self._create_and_get_model()
 
     def _create_and_get_model(self):
@@ -32,7 +33,6 @@ class FaceEmbedder():
             towards feature embeddings
         """
         # TODO: move to somewhere else ??
-        model_types = ["vggface2", "CASIA-Webface"]
         model = InceptionResnetV1(pretrained="vggface2")
 
         activate_prediction_mode = True
@@ -77,7 +77,7 @@ class FaceEmbedder():
         """
         if torch.cuda.is_available():
             return torch.device('cuda:0')
-        return (torch.device('cpu')).type
+        return torch.device('cpu')
 
     @staticmethod
     def _fixed_image_standardization(image_tensor):

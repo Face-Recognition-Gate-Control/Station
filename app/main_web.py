@@ -64,13 +64,14 @@ def root(request: Request):
 @app.websocket("/comms")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    
+    test_payload = {"state": "INIT"}
+    
     try:
         while True:
             try:
                 msg = recv_que.get_response()
-                await websocket.send_json({
-                    "msg": msg
-                })
+                await websocket.send_json(test_payload)
                 recv_que.confirm_sent()
             except queue.Empty:
                 pass # LOL :P

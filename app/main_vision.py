@@ -28,7 +28,7 @@ PATH_TO_CROPS = "static/images/test_crops"
 
 if __name__ == "__main__":
 
-    camera = VideoCamera()
+    camera = VideoCamera(SRC=1)
     canvas = VideoCanvas()
     face_embedder = FaceEmbedder()
     face_detector = FaceRecognizer(PATH_TO_FACE_DETECTION_MODEL)

@@ -13,6 +13,11 @@ class Timer:
 
     def current(self):
         return int((time.clock() - self._start_time))
+    
+    def is_running(self):
+        if self._start_time is not None:
+            return True
+        return False
 
     def stop(self):
         if self._start_time is not None:
