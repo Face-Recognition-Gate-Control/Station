@@ -33,12 +33,12 @@ class ResponseReceiver():
         try:
             payload_type = payload.payload_name
 
-            
             if payload_type == "gate_authorized":
                 """ we're registrated as a gate station """
                 # does the gate name match ours??
-                gate_name = payload["json_payload"]["station_name"]
+                gate_name = payload.payload_data["station_name"]
                 response = {
+                    "name": payload_type,
                     "state": "OTHER",
                     "data": {
                         "gate_name": gate_name
@@ -52,6 +52,7 @@ class ResponseReceiver():
                 print("payload_data: ", payload.payload_data)
                 print("    segments: ", payload.segments)
                 response = {
+                    "name": payload_type,
                     "state": "OTHER",
                     "data": {
                         "payload_name": payload.payload_name
@@ -63,6 +64,7 @@ class ResponseReceiver():
                 """ user is identified """
                 # we've now received a thumbnail.jpg in ./tmp folder
                 response = {
+                    "name": payload_type,
                     "state": "VALIDATION",
                     "data": {
                         "message": payload.payload_data["message"],
@@ -71,19 +73,21 @@ class ResponseReceiver():
                         "thumbnail_path": payload.segments["thumbnail"]
                     }
                 }
+                print(response)
 
             elif payload_type == "user_unidentified":
                 # user not registrated
                 # open the registration_url from response
                 # generate QR-CODE and show it in GUI
                 # get URL from the response, and generate QR CODE stuff
-                TMP_DIR = "app/tmp/imgs/"
+                TMP_DIR = "static/images/"
                 FILENAME = "qr.jpg"
                 QR_PATH = TMP_DIR + FILENAME
                 registration_url = payload.payload_data["registration_url"]
                 img = qrcode.make(registration_url)
                 img.save(QR_PATH)
                 response = {
+                    "name": payload_type,
                     "state": "VALIDATION",
                     "data": {
                         "session_id": payload.payload_data["session_id"],
@@ -93,10 +97,8 @@ class ResponseReceiver():
             else:
                 print("ERROR: No created response.")
 
-
         except KeyError as ke:
             print("ERROR: No matching key in payload")
             print(ke)
 
         return response
-
