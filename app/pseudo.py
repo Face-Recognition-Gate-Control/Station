@@ -25,6 +25,8 @@ IS_ACCESSED: bool
 
 IS_RESTART: bool
 IS_VALIDATING_TAKING_TO_LONG: bool
+
+# DEBUG TOOLS
 SHOW_FACE_BOX: bool
 """
 Q & A
@@ -42,10 +44,7 @@ S_SCANNING = "SCANNING"
 S_VALIDATING = "VALIDATING"
 S_ACCESS = "ACCESS"
 
-current_state = {"state": S_SCANNING}
-
-msg_from_server = False
-
+current_state = S_INIT
 
 def pseudo_camera_loop():
     response_timer = Timer(5)    # answer from server

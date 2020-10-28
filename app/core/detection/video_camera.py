@@ -48,6 +48,7 @@ class VideoCamera():
         _, self.main_frame = self.cap.read()
         return self.main_frame
 
+
     def get_roi(self, crop):
         """creates a crop based upon the original size of the frame
         from the video capturing device
@@ -60,6 +61,11 @@ class VideoCamera():
         """
         x_min, y_min, x_max, y_max = crop
         return self.main_frame[int(y_min):int(y_max), int(x_min):int(x_max)]
+
+    @staticmethod
+    def frame_to_bytes(frame):
+        _, frame_buffer = cv2.imencode('.jpg', frame)
+        return frame_buffer.tobytes()
 
     @staticmethod
     def draw_rectangle(frame, coords):

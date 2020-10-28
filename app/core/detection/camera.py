@@ -11,7 +11,7 @@ PADDING = 30             # px
 
 class VideoCamera():
     def __init__(self):
-        self.camera = cv2.VideoCapture(1)
+        self.camera = cv2.VideoCapture(0)
 
     def __del__(self):
         self.camera.release()

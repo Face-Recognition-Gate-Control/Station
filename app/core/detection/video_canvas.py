@@ -44,7 +44,7 @@ class VideoCanvas():
             frame ([numpy.ndarray]): [the frame to draw the rectangle onto]
             coords ([list]): [list of min/max set points]
         """
-        cv2.rectangle(frame, (int(coords[0]), int(coords[1])),  (int(coords[2]), int(coords[3])),
+        return cv2.rectangle(frame, (int(coords[0]), int(coords[1])),  (int(coords[2]), int(coords[3])),
                       BOX_COLOR, LINE_THICKNESS)
 
     @staticmethod
@@ -58,7 +58,7 @@ class VideoCanvas():
         """
         if not isinstance(text, str):
             text = str(text)
-        cv2.putText(frame, text, (coords[0], coords[1] - 10),
+        return cv2.putText(frame, text, (coords[0], coords[1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.75, (100, 100, 255), 2)
 
         # TESTING

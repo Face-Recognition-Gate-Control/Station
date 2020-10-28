@@ -39,7 +39,7 @@ class ResponseReceiver():
                 # does the gate name match ours??
                 gate_name = payload["json_payload"]["station_name"]
                 response = {
-                    "state": "OTHER",
+                    "state": "DEFAULT",
                     "data": {
                         "gate_name": gate_name
                     }
@@ -52,7 +52,7 @@ class ResponseReceiver():
                 print("payload_data: ", payload.payload_data)
                 print("    segments: ", payload.segments)
                 response = {
-                    "state": "OTHER",
+                    "state": "PONG",
                     "data": {
                         "payload_name": payload.payload_name
                     }
@@ -65,9 +65,9 @@ class ResponseReceiver():
                 response = {
                     "state": "VALIDATION",
                     "data": {
-                        "message": payload.payload_data["message"],
                         "session_id": payload.payload_data["session_id"],
-                        "access_granted": payload.payload_data["access_granted"],
+                        "message": payload.payload_data["message"],
+                        "access_granted": True, # payload.payload_data["access_granted"]
                         "thumbnail_path": payload.segments["thumbnail"]
                     }
                 }
@@ -77,7 +77,7 @@ class ResponseReceiver():
                 # open the registration_url from response
                 # generate QR-CODE and show it in GUI
                 # get URL from the response, and generate QR CODE stuff
-                TMP_DIR = "app/tmp/imgs/"
+                TMP_DIR = "../../tmp/imgs/"
                 FILENAME = "qr.jpg"
                 QR_PATH = TMP_DIR + FILENAME
                 registration_url = payload.payload_data["registration_url"]
@@ -87,7 +87,8 @@ class ResponseReceiver():
                     "state": "VALIDATION",
                     "data": {
                         "session_id": payload.payload_data["session_id"],
-                        "qr_path": QR_PATH
+                        "access_granted": False,
+                        "qr_path": FILENAME
                     }
                 }
             else:
@@ -100,3 +101,15 @@ class ResponseReceiver():
 
         return response
 
+
+if __name__ == "__main__":
+
+
+    registration_url = "https://fractal.uials.no"
+
+    TMP_DIR = "../../tmp/imgs/"
+    FILENAME = "qr.jpg"
+    QR_PATH = TMP_DIR + FILENAME
+
+    img = qrcode.make(registration_url)
+    img.save(QR_PATH)
