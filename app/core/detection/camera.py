@@ -25,6 +25,13 @@ class VideoCamera():
         _, frame_buffer = cv2.imencode('.jpg', temp)
         return frame_buffer.tobytes()
 
+    def frame_to_bytes(self, frame):
+        _, frame_buffer = cv2.imencode('.jpg', frame)
+        return frame_buffer.tobytes()
+
+    def save_frame(self, frame, name):
+        cv2.imwrite(name, frame)
+
     def draw_rect(self, rect):
         ret, frame = self.camera.read()
         ret, frame_buffer = cv2.imencode('.jpg', frame)

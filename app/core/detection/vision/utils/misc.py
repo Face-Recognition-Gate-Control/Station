@@ -9,18 +9,18 @@ def str2bool(s):
 
 class Timer:
     def __init__(self):
-        self.clock = {}
+        self.process_time = {}
 
     def start(self, key="default"):
-        self.clock[key] = datetime.datetime.now()
+        self.process_time[key] = datetime.datetime.now()
 
     def end(self, key="default"):
-        if key not in self.clock:
+        if key not in self.process_time:
             raise Exception(f"{key} is not in the clock.")
-        interval = datetime.datetime.now() - self.clock[key]
-        del self.clock[key]
+        interval = datetime.datetime.now() - self.process_time[key]
+        del self.process_time[key]
         return interval.total_seconds()
-        
+
 
 def save_checkpoint(epoch, net_state_dict, optimizer_state_dict, best_score, checkpoint_path, model_path):
     torch.save({
@@ -30,8 +30,8 @@ def save_checkpoint(epoch, net_state_dict, optimizer_state_dict, best_score, che
         'best_score': best_score
     }, checkpoint_path)
     torch.save(net_state_dict, model_path)
-        
-        
+
+
 def load_checkpoint(checkpoint_path):
     return torch.load(checkpoint_path)
 
