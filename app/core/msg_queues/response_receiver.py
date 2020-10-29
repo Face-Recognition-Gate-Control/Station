@@ -14,7 +14,7 @@ class ResponseReceiver():
 
     def get_response(self):
         """ Gets payloads received from the client """
-        return self.que.get(timeout=0.015)
+        return self.que.get(timeout=0.0005)
 
     def confirm_sent(self):
         self.que.task_done()
@@ -27,11 +27,11 @@ class ResponseReceiver():
 
     @staticmethod
     def create_response(payload):
-        print("Received response")
 
         response = None
         try:
             payload_type = payload.payload_name
+            print(f"RECV: response [type: {payload_type}]")
 
             if payload_type == "gate_authorized":
                 """ we're registrated as a gate station """
@@ -63,24 +63,24 @@ class ResponseReceiver():
             elif payload_type == "user_identified":
                 """ user is identified """
                 # we've now received a thumbnail.jpg in ./tmp folder
+                thumbnail_dir = "./static/images/tmp/" + "thumbnail.jpg"
                 response = {
                     "name": payload_type,
                     "state": "VALIDATION",
                     "data": {
                         "session_id": payload.payload_data["session_id"],
                         "message": payload.payload_data["message"],
-                        "access_granted": True, # payload.payload_data["access_granted"]
-                        "thumbnail_path": payload.segments["thumbnail"]
+                        "access_granted": payload.payload_data["access_granted"],
+                        "thumbnail_path": thumbnail_dir, #payload.segments["thumbnail"]
                     }
                 }
-                print(response)
 
             elif payload_type == "user_unidentified":
                 # user not registrated
                 # open the registration_url from response
                 # generate QR-CODE and show it in GUI
                 # get URL from the response, and generate QR CODE stuff
-                TMP_DIR = "static/images/"
+                TMP_DIR = "./static/images/tmp/"
                 FILENAME = "qr.jpg"
                 QR_PATH = TMP_DIR + FILENAME
                 registration_url = payload.payload_data["registration_url"]
@@ -92,7 +92,7 @@ class ResponseReceiver():
                     "data": {
                         "session_id": payload.payload_data["session_id"],
                         "access_granted": False,
-                        "qr_path": FILENAME
+                        "qr_path": TMP_DIR
                     }
                 }
             else:

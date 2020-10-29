@@ -29,8 +29,14 @@ class VideoCamera():
         _, frame_buffer = cv2.imencode('.jpg', frame)
         return frame_buffer.tobytes()
 
-    def save_frame(self, frame, name):
-        cv2.imwrite(name, frame)
+    @staticmethod
+    def save_thumbnail(frame, face_box, name):
+        save_directory = f"static/images/tmp/{name}.jpg"
+        x_min, y_min, x_max, y_max = face_box
+        H_PAD = 20
+        W_PAD = 40
+        face_thumbnail = frame[int(y_min-H_PAD):int(y_max+H_PAD), int(x_min-W_PAD):int(x_max+W_PAD)]
+        cv2.imwrite(save_directory, face_thumbnail)
 
     def draw_rect(self, rect):
         ret, frame = self.camera.read()

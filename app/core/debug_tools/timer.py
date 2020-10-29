@@ -34,7 +34,7 @@ class Timer:
 
     def restart(self):
         if self._start_time is not None:
-            print("Restarting!")
+            #print("Restarting!")
             self._start_time = time.process_time()
 
     def renew(self, extra_time):

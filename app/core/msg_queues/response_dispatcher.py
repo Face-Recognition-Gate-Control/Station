@@ -16,7 +16,7 @@ class ResponseDispatcher:
 
     def get_response(self):
         """ Gets response ready to be handled """
-        return self.que.get(timeout=0.015)
+        return self.que.get(timeout=0.0005)
 
     def confirm_sent(self):
         self.que.task_done()
@@ -29,10 +29,10 @@ class ResponseDispatcher:
 
     @staticmethod
     def create_payload_response(response):
-        print("Creating payload response")
         payload = None
         try:
             response_name = response["response_name"]
+            print(f"SEND: response [type: {response_name}]")
 
             if response_name == "gate_authorization":
                 payload = Payload("gate_authorization")
@@ -60,6 +60,7 @@ class ResponseDispatcher:
                     {"session_id": response["session_id"]}))
                 payload.add_segment("thumbnail", FileSegment(
                     open(response["thumbnail_path"], "rb")))
+
 
             elif response_name == "user_entered":
                 """ COUNTDOWN FOR LIKE 10 SECONDS?? """

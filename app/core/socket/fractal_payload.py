@@ -68,6 +68,7 @@ class Payload:
         ## START WRITING ##
 
         # TOTAL PAYLOAD SIZE
+        # print(total_payload_size)
         send_all(total_payload_bytes)
 
         # PAYLOAD NAME SIZE

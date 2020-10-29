@@ -1,6 +1,7 @@
 import asyncio
 import queue
 import time
+import uuid
 import cv2
 
 from fastapi.responses import HTMLResponse
@@ -43,7 +44,7 @@ canvas = VideoCanvas()
 camera_timer = Timer(2)
 
 # COMMUNICATION TO REMOTE SERVER
-client = FractalClient("localhost", 9876, FractalReader())
+client = FractalClient("213.161.242.88", 9876, FractalReader())
 client.set_queues(disp_que, recv_que)
 client.init()
 ping_timer = Timer(3)     # CHECK IF REMOTE SERVER IS ALIVE
@@ -54,6 +55,11 @@ from_server_timer = Timer(5) # HOW LONG TO WAIT FROM SERVER
 # TODO: some state management stuff
 current_state = "IDLE"
 
+def generateStringUUID():
+    return str(uuid.uuid4())
+
+
+current_session_id = generateStringUUID()
 
 # DEBUG
 DISPLAY_FACE_BOX = False
@@ -127,6 +133,7 @@ def frame_generator():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     global current_state
+    entrence_timer = Timer(5)
     try:
         while True:
             try:
@@ -145,6 +152,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     is_access_granted = response["data"]["access_granted"]
                     if not is_access_granted:
                         data["access_granted"] = False
+                        data["message"] = response["data"]["message"] # NOT ALLOWS BECAUSE OF CORONA
                         data["qr_path"] = response["data"]["qr_path"]
                     else:
                         state = "ACCESS" # Change state
@@ -154,7 +162,23 @@ async def websocket_endpoint(websocket: WebSocket):
                     data["state"] =  "ACCESS"
                     data["access_granted"] = True
                     data["thumbnail_path"] = response["data"]["thumbnail_path"]
-                    
+
+                    state = "SIMULATE_GATE_ENTRENCE"
+
+                if state == "SIMULATE_GATE_ENTRENCE":
+                    entrence_timer.start()
+                    while True:
+                        if entrence_timer.is_expired():
+                            disp_que.add_response({
+                                "response_name": "user_entered",
+                                "session_id": current_session_id
+                            })
+                            entrence_timer.stop()
+                            break
+
+                        # RESUME SCANNING
+                        state = "RESTART"
+
                 if state == "PONG":
                     """ SIGNALS THAT THE SERVER RECEIVED OUR PING AND REPONDED """
                     # TODO: RESET GATE_PING_TIMER, and retry in 3 minutes?

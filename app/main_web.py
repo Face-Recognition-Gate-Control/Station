@@ -19,7 +19,6 @@ from core.debug_tools.fps import FPS
 from core.detection.face_embedder import FaceEmbedder
 from core.detection.face_recognizer import FaceRecognizer
 from core.detection.video_canvas import VideoCanvas
-from core.utils.data import compare_embeddings, load_embeddings_to_dict
 import numpy as np
 import torch
 import cv2
@@ -43,12 +42,9 @@ PATH_TO_ANCHORS = "static/images/test_embeddings"
 PATH_TO_IMAGES = "static/images/test_images"
 PATH_TO_CROPS = "static/images/test_crops"
 
+# MODELS
 face_embedder = FaceEmbedder()
 face_detector = FaceRecognizer(PATH_TO_FACE_DETECTION_MODEL)
-
-# " DATABASE "
-embeddings = load_embeddings_to_dict(PATH_TO_ANCHORS)
-
 
 # SERVER SETTINGS
 app = FastAPI()
@@ -58,13 +54,12 @@ templates = Jinja2Templates(directory="templates")
 # WEB CAMERA
 cam = VideoCamera()
 
-
 # GLOBAL MESSAGE QUEUES
 recv_que = ResponseReceiver()
 disp_que = ResponseDispatcher()
 
 # CONNECTION TO REMOTE SERVER
-client = FractalClient("localhost", 9876, FractalReader())
+client = FractalClient("213.161.242.88", 9876, FractalReader())
 client.set_queues(disp_que, recv_que)
 client.init()
 time.sleep(.1)
@@ -73,28 +68,24 @@ time.sleep(.1)
 # Connect to the server
 disp_que.add_response({"response_name": "gate_authorization"})
 
-
 def generateStringUUID():
     return str(uuid.uuid4())
 
 
 session_id = generateStringUUID()
 
-# DEBUG TOOLS
-debug_timer = Timer(countdown=1)
-debug_fps = FPS()
 
+speed_timer = None
 
 @app.on_event("shutdown")
 def shutdown_event():
     client.close_client()
 
-
 def frame_generator():
-    debug_timer.start()
+    
     face_timer = Timer(countdown=3)
     face_timer.start()
-
+    global speed_timer
     while True:
         frame = cam.read_frame()
         face_boxes = face_detector.predict_faces(frame)
@@ -103,12 +94,23 @@ def frame_generator():
             if (face_timer.is_expired()):
                 x_min, y_min, x_max, y_max = face_box
                 crop = frame[int(y_min):int(y_max), int(x_min):int(x_max)]
-
+    
                 face_emb = face_embedder.frame_to_embedding(crop)
-                cam.save_frame(frame, f"tmp/imgs/{session_id}.jpg")
+
+                e = face_emb.tolist()[0]
+
+                cam.save_thumbnail(frame, face_box, session_id)
+
                 disp_que.add_response(
-                    {"response_name": "user_authorization", "embedding": face_emb.tolist()[0], "session_id": session_id})
-                face_timer.restart()
+                    {"response_name": "user_authorization",
+                    "embedding": e, 
+                    "session_id": session_id})
+
+                """ STOPS TIMER, THEREFORE ONLY 1 EMBEDDING SENT """
+                face_timer.stop()
+
+                # START SPEED_TEST TIMER
+                speed_timer = time.time()
 
         yield (b"--frame\r\nContent-Type:image/jpeg\r\n\r\n" + cam.frame_to_bytes(frame) + b"\r\n")
 
@@ -128,31 +130,47 @@ def root(request: Request):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    test_payload = {"state": "INIT"}
-
-    capture_embedding = True
-    print(session_id)
-
+    print("Session ID: ", session_id)
+    global speed_timer
     try:
         while True:
             try:
+                # TIMER
+                stop_timer = False
+
                 msg = recv_que.get_response()
                 recv_que.confirm_sent()
-                print(msg)
                 if (msg["name"] == "user_unidentified"):
+
+                    # SEND TO REMOTE
                     session = msg["data"]["session_id"]
                     disp_que.add_response(
-                        {"response_name": "user_thumbnail", "thumbnail_path": "./tmp/imgs/"+session+".jpg", "session_id": session})
-                    await websocket.send_json({"qr": True})
-                    capture_embedding = True
+                        {"response_name": "user_thumbnail",
+                        "thumbnail_path": "./static/images/tmp/" + session + ".jpg",
+                        "session_id": session})
+                    
+                    # SHOW LOCALLY
+                    path = msg["data"]["qr_path"]
+                    await websocket.send_json({"thumbnail_path": path})
+
+                    stop_timer = True # TIMER
 
                 elif (msg["name"] == "user_identified"):
-                    print(msg["data"])
-                    # disp_que.add_response(
-                    #     {"response_name": "user_thumbnail", "thumbnail_path": "./tmp/"+msg["session_id"]+".jpg"})
+                    # SHOW LOCALLY
+                    path = msg["data"]["thumbnail_path"]
+                    await websocket.send_json({"thumbnail_path": path})
+                    stop_timer = True
+
+
+                if stop_timer:
+                    # STOP SPEED_TEST TIMER
+                    stop = time.time() - speed_timer
+                    print("Took (s): ", str(stop))
+
 
             except queue.Empty:
                 pass  # LOL :P
-            await asyncio.sleep(0.015)
+            await asyncio.sleep(0.0005)
+
     except WebSocketDisconnect:
         await websocket.close(code=1000)

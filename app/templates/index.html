@@ -24,7 +24,7 @@ function changeMainDisplay(newImgPath="") {
 
 function changeThumbnailDisplay(newImgPath="") {
   var elementId = "thumbnail";
-  var defaultSrc = "/static/images/thumbnail.png";
+  var defaultSrc = "/static/images/frontend/thumbnail.png";
   _changeElementSource(elementId, defaultSrc, newImgPath);
 };
 
@@ -62,6 +62,18 @@ const ws = new WebSocket("ws://localhost:8000/comms");
 ws.onmessage = function(event) {
   var data = JSON.parse(event.data);
   console.log(data)
+  
+  if ("thumbnail_path" in data) {
+    var thumbnailFaceImage = data.thumbnail_path;
+    changeThumbnailDisplay(thumbnailFaceImage);
+  }
+  if ("qr" in data) {
+    if (data["qr"]) {
+      changeThumbnailDisplay("./static/images/tmp/qr.jpg");
+    }
+    
+  }
+
 };
 
 </script>
@@ -93,13 +105,13 @@ ws.onmessage = function(event) {
 
 <div class="ui container center aligned page">
   <img id="main_display" class="ui main image centered" src="{{ url_for('frame_streamer') }}" alt=/>
-  {# <img id="main_display" class="ui main image centered" src="/static/images/test.png">   #}
+  {# <img id="main_display" class="ui main image centered" src="/static/images/frontend/test.png">   #}
 </div>
 
 <h4 class="ui horizontal inverted divider"></h4>
 
 <div class="ui container center aligned page">
-  <img id="thumbnail" class="ui main image centered" src="/static/images/thumbnail.png">
+  <img id="thumbnail" class="ui main image centered" src="/static/images/frontend/thumbnail.png">
 </div>
 
 
