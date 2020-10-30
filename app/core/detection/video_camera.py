@@ -48,8 +48,7 @@ class VideoCamera():
         _, self.main_frame = self.cap.read()
         return self.main_frame
 
-
-    def get_roi(self, crop):
+    def crop_frame(self, crop):
         """creates a crop based upon the original size of the frame
         from the video capturing device
 
@@ -61,11 +60,35 @@ class VideoCamera():
         """
         x_min, y_min, x_max, y_max = crop
         return self.main_frame[int(y_min):int(y_max), int(x_min):int(x_max)]
-
+    
     @staticmethod
     def frame_to_bytes(frame):
+        """ converts a numpy.ndarray into bytes
+
+        Args:
+            frame ([numpy.ndarray]): frame
+
+        Returns:
+            [bytes]: [output buffer]
+        """
         _, frame_buffer = cv2.imencode('.jpg', frame)
         return frame_buffer.tobytes()
+
+    @staticmethod
+    def save_thumbnail(frame, face_box, name):
+        """saves an face image with a given padding added_layer
+
+        Args:
+            frame (numpy.ndarray): frame
+            face_box (numpy.ndarray): face COORDS
+            name (filename): name of file
+        """
+        save_directory = f"static/images/tmp/{name}.jpg"
+        x_min, y_min, x_max, y_max = face_box
+        H_PAD = 20
+        W_PAD = 40
+        face_thumbnail = frame[int(y_min-H_PAD):int(y_max+H_PAD), int(x_min-W_PAD):int(x_max+W_PAD)]
+        cv2.imwrite(save_directory, face_thumbnail)
 
     @staticmethod
     def draw_rectangle(frame, coords):
@@ -79,11 +102,20 @@ class VideoCamera():
 
     @staticmethod
     def valid_size(coords):
-        """ format: xmin, ymin, xmax, ymax """
-        WIDTH_REQUIRED  = 130
-        HEIGTH_REQUIRED = 190
+        """checks if coords size is valid
+
+        Args:
+            coords (numpy.ndarray): coords
+            'format: xmin, ymin, xmax, ymax'
+
+        Returns:
+            bool: true if valid size, false otherwise
+        """
+        WIDTH_REQUIRED  = 150
+        HEIGTH_REQUIRED = 250
         WIDTH_TEST = coords[2] - coords[0]
         HEIGTH_TEST = coords[3] - coords[1]
+
         if (WIDTH_TEST > WIDTH_REQUIRED):
             if(HEIGTH_TEST > HEIGTH_REQUIRED):
                 return True
@@ -91,28 +123,29 @@ class VideoCamera():
 
     @staticmethod
     def get_color(frame):
+        """ returns valid (green) color, red otherwise
+
+        Args:
+            frame (numpy.ndarray): frame
+
+        Returns:
+            tuple: RGB colors
+        """
         if VideoCamera.valid_size(frame):
             return GRN_COLOR
         return RED_COLOR
 
-# TESTING
 if __name__ == "__main__":
 
-    cap = cv2.VideoCapture(1)
+    cap = VideoCamera()
 
-    while(True):
-        # Capture frame-by-frame
-        ret, frame = cap.read()
+    while True:
 
-        # Our operations on the frame come here
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame = cap.get_frame()
 
-        # Display the resulting frame
-        cv2.imshow('frame',gray)
+        cv2.imshow('Window', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    # When everything done, release the capture
-    cap.release()
     cv2.destroyAllWindows()
 

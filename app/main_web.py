@@ -11,14 +11,15 @@ from core.msg_queues.response_dispatcher import ResponseDispatcher
 from core.msg_queues.response_receiver import ResponseReceiver
 from core.socket.fractal_client import FractalClient
 from core.socket.fractal_reader import FractalReader
-from core.detection.camera import VideoCamera
+# from core.detection.camera import VideoCamera
 from core.debug_tools.timer import Timer
 from core.debug_tools.fps import FPS
 
 
 from core.detection.face_embedder import FaceEmbedder
 from core.detection.face_recognizer import FaceRecognizer
-from core.detection.video_canvas import VideoCanvas
+from core.detection.video_camera import VideoCamera
+
 import numpy as np
 import torch
 import cv2
@@ -64,7 +65,6 @@ client.set_queues(disp_que, recv_que)
 client.init()
 time.sleep(.1)
 
-
 # Connect to the server
 disp_que.add_response({"response_name": "gate_authorization"})
 
@@ -84,35 +84,50 @@ def shutdown_event():
 def frame_generator():
     
     face_timer = Timer(countdown=3)
-    face_timer.start()
+
     global speed_timer
+
+    SHOW_FACE = True
+    
     while True:
-        frame = cam.read_frame()
+
+        frame = cam.get_frame()
         face_boxes = face_detector.predict_faces(frame)
 
         for face_box in face_boxes:
-            if (face_timer.is_expired()):
-                x_min, y_min, x_max, y_max = face_box
-                crop = frame[int(y_min):int(y_max), int(x_min):int(x_max)]
-    
-                face_emb = face_embedder.frame_to_embedding(crop)
 
-                e = face_emb.tolist()[0]
 
-                cam.save_thumbnail(frame, face_box, session_id)
+            if VideoCamera.valid_size(face_box):
 
-                disp_que.add_response(
-                    {"response_name": "user_authorization",
-                    "embedding": e, 
-                    "session_id": session_id})
+                face_timer.start()
 
-                """ STOPS TIMER, THEREFORE ONLY 1 EMBEDDING SENT """
-                face_timer.stop()
+                if face_timer.is_expired():
+                    
+                    face_crop = cam.crop_frame(face_box)        
+                    face_emb = face_embedder.frame_to_embedding(face_crop)
+                    face_emb = face_emb.tolist()[0]
 
-                # START SPEED_TEST TIMER
-                speed_timer = time.time()
+                    # SAVE LOCALLY
+                    cam.save_thumbnail(frame, face_box, session_id)
 
-        yield (b"--frame\r\nContent-Type:image/jpeg\r\n\r\n" + cam.frame_to_bytes(frame) + b"\r\n")
+                    disp_que.add_response(
+                        {"response_name": "user_authorization",
+                        "embedding": face_emb, 
+                        "session_id": session_id})
+
+                    """ STOPS TIMER, THEREFORE ONLY 1 EMBEDDING SENT """
+                    face_timer.stop()
+
+                    # START SPEED_TEST TIMER
+                    speed_timer = time.time()
+            else:
+                face_timer.restart()
+
+            if SHOW_FACE:
+                frame = VideoCamera.draw_rectangle(frame, face_box)
+
+        frame_bytes = VideoCamera.frame_to_bytes(frame)
+        yield (b"--frame\r\nContent-Type:image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
 
 
 @app.get("/frame_streamer")

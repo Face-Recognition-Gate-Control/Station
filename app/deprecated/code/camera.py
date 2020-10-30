@@ -25,7 +25,8 @@ class VideoCamera():
         _, frame_buffer = cv2.imencode('.jpg', temp)
         return frame_buffer.tobytes()
 
-    def frame_to_bytes(self, frame):
+    @staticmethod
+    def frame_to_bytes(frame):
         _, frame_buffer = cv2.imencode('.jpg', frame)
         return frame_buffer.tobytes()
 

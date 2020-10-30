@@ -57,7 +57,6 @@ class FractalReader:
             else:
                 file_name = str(uuid.uuid1())
 
-            file_name = "thumbnail.jpg"
             file_full_path = TMP_DIR + file_name
             tempt_segment_file = open(TMP_DIR + file_name, 'wb')
             buffer = 4096

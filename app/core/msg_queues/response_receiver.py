@@ -71,7 +71,7 @@ class ResponseReceiver():
                         "session_id": payload.payload_data["session_id"],
                         "message": payload.payload_data["message"],
                         "access_granted": payload.payload_data["access_granted"],
-                        "thumbnail_path": thumbnail_dir, #payload.segments["thumbnail"]
+                        "thumbnail_path": payload.segments["thumbnail"].file_name
                     }
                 }
 
@@ -92,7 +92,7 @@ class ResponseReceiver():
                     "data": {
                         "session_id": payload.payload_data["session_id"],
                         "access_granted": False,
-                        "qr_path": TMP_DIR
+                        "qr_path": QR_PATH
                     }
                 }
             else:
