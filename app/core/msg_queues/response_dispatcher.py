@@ -66,7 +66,7 @@ class ResponseDispatcher:
                 """ COUNTDOWN FOR LIKE 10 SECONDS?? """
                 payload = Payload("user_entered")
                 payload.add_json_data(json.dumps(
-                    {"session_id": "ID from authorization"}))
+                    {"session_id": response["session_id"]}))
 
             else:
                 print("Couldn't create payload")

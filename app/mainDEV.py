@@ -104,9 +104,9 @@ async def websocket_endpoint(websocket: WebSocket):
         global is_server_msg_recvd
         while True:
 
-            # Restarts system, if no server response
+            # EVENT RESTARTS: if no server response
             on_server_timer()
-            # Restarts system, if entrence granted 
+            # EVENT RESTARTS: if entrence granted 
             on_entrence_timer()
 
             display = {"state": "IDLE"}
@@ -128,7 +128,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if state == "SCANNING":
                     display["state"] = "SCANNING"
                     camera_command.set("SCANNING")
-                    is_server_msg_recvd = False
+                    is_server_msg_recvd = False # RESET
                     
                 if state == "VALIDATION":
                     display["state"] =  "VALIDATION"
@@ -179,7 +179,7 @@ def root(request: Request):
     return templates.TemplateResponse("indexDEV.html", context={"request": request})
 
 
-""" ---------------------- EVENTS ------------------------ """
+""" ---------------------- EVENT HANDLERS ------------------------ """
 
 def on_server_timer():
     if server_timer.is_running():

@@ -61,7 +61,7 @@ const ws = new WebSocket("ws://localhost:8000/comms");
 
 ws.onmessage = function(event) {
   var data = JSON.parse(event.data);
-  console.log(data)
+  console.log(state)
 
   var state = data.state;
 
@@ -72,16 +72,19 @@ ws.onmessage = function(event) {
       break;
 
     case "SCANNING":
+      console.log("[STATE] => ", state)
       enableStep(1);
       break;
 
     case "VALIDATION":
+      console.log("[STATE] => ", state)
       var qrCodeImage = data.qr_path;
       changeThumbnailDisplay(qrCodeImage);
       enableStep(2);
       break;
 
     case "ACCESS":
+      console.log("[STATE] => ", state)
       var thumbnailFaceImage = data.thumbnail_path;
       changeThumbnailDisplay(thumbnailFaceImage);
       enableStep(2);
@@ -89,6 +92,7 @@ ws.onmessage = function(event) {
       break;
 
     case "RESTART":
+      console.log("[STATE] => ", state)
       resetSystem(); 
       break;
     
