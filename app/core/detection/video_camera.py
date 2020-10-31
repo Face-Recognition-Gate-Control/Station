@@ -48,7 +48,8 @@ class VideoCamera():
         _, self.main_frame = self.cap.read()
         return self.main_frame
 
-    def crop_frame(self, crop):
+    @staticmethod
+    def crop_frame(frame, crop):
         """creates a crop based upon the original size of the frame
         from the video capturing device
 
@@ -59,7 +60,7 @@ class VideoCamera():
             [numpy.ndarray]: [reduced size of the frame]
         """
         x_min, y_min, x_max, y_max = crop
-        return self.main_frame[int(y_min):int(y_max), int(x_min):int(x_max)]
+        return frame[int(y_min):int(y_max), int(x_min):int(x_max)]
     
     @staticmethod
     def frame_to_bytes(frame):

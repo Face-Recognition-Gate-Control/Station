@@ -5,8 +5,8 @@ from .vision.ssd.config.fd_config import define_img_size
 import torch
 
 
-# TODO: adjust? image_std  (curr. 128)
-# TODO: adjust? iou_threshold (curr. 0.8)
+
+PATH_TO_FACE_DETECTION_MODEL = "./static/models/RFB-640/face_model.pth"
 
 class FaceRecognizer():
     """
@@ -14,14 +14,13 @@ class FaceRecognizer():
     designed for edge computing devices
     """
 
-    # TODO: move to somewhere else ????
     INPUT_IMAGE_SIZE = 640    # default cv2-size
     NUMB_OF_RESULTS = 1       # keep 'x' results
     PROB_THRESHOLD = 0.8      # sens 0 - 1 (1=highest)
     # only consider the candidates with the highest scores.
     CANDIDATE_SIZE = 500
 
-    def __init__(self, model_path, default_size=640):
+    def __init__(self, default_size=640):
         """Initializes an instance of the face-prediction model with 
         given set of configurations based upon the network structure and model type
 
@@ -29,7 +28,7 @@ class FaceRecognizer():
             model_path ([str]): [path to stored model]
             default_size (int, optional): [normal expected input size to model]. Defaults to 640.
         """
-        self.model_path = model_path
+        self.model_path = PATH_TO_FACE_DETECTION_MODEL
         self.torch_device = self._create_and_get_device()
         self._set_network_image_size(image_size=default_size)
         self.net = self._get_network_structure()

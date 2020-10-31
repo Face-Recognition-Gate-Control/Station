@@ -67,11 +67,9 @@ ws.onmessage = function(event) {
     var thumbnailFaceImage = data.thumbnail_path;
     changeThumbnailDisplay(thumbnailFaceImage);
   }
-  if ("qr" in data) {
-    if (data["qr"]) {
-      changeThumbnailDisplay("./static/images/tmp/qr.jpg");
-    }
-    
+  if ("qr_path" in data) {
+    changeThumbnailDisplay(thumbnailFaceImage);
+    changeThumbnailDisplay("./static/images/tmp/qr.jpg");
   }
 
 };

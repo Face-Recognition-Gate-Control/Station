@@ -1,3 +1,4 @@
+
 from PIL import Image
 import queue
 import qrcode
@@ -31,7 +32,7 @@ class ResponseReceiver():
         response = None
         try:
             payload_type = payload.payload_name
-            print(f"RECV: response [type: {payload_type}]")
+            print(f"[RECV]: response | type: {payload_type}")
 
             if payload_type == "gate_authorized":
                 """ we're registrated as a gate station """
@@ -48,9 +49,6 @@ class ResponseReceiver():
             elif payload_type == "pong":
                 """ server wants to know if we're alive """
                 """ our 'ping' was successful """
-                print("payload_name: ", payload.payload_name)
-                print("payload_data: ", payload.payload_data)
-                print("    segments: ", payload.segments)
                 response = {
                     "name": payload_type,
                     "state": "OTHER",
@@ -63,7 +61,6 @@ class ResponseReceiver():
             elif payload_type == "user_identified":
                 """ user is identified """
                 # we've now received a thumbnail.jpg in ./tmp folder
-                thumbnail_dir = "./static/images/tmp/" + "thumbnail.jpg"
                 response = {
                     "name": payload_type,
                     "state": "VALIDATION",
@@ -80,9 +77,7 @@ class ResponseReceiver():
                 # open the registration_url from response
                 # generate QR-CODE and show it in GUI
                 # get URL from the response, and generate QR CODE stuff
-                TMP_DIR = "./static/images/tmp/"
-                FILENAME = "qr.jpg"
-                QR_PATH = TMP_DIR + FILENAME
+                QR_PATH = "./static/images/tmp/qr.jpg"
                 registration_url = payload.payload_data["registration_url"]
                 img = qrcode.make(registration_url)
                 img.save(QR_PATH)

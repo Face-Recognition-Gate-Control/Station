@@ -1,130 +1,97 @@
 import asyncio
 import queue
-import time
-import uuid
-import cv2
-
+import time 
+# MODULES
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import FastAPI, Request, WebSocket
 from starlette.responses import StreamingResponse
 from starlette.websockets import WebSocketDisconnect
-# FRACTAL core
+# FRACTAL
 from core.msg_queues.response_dispatcher import ResponseDispatcher
 from core.msg_queues.response_receiver import ResponseReceiver
 from core.socket.fractal_client import FractalClient
 from core.socket.fractal_reader import FractalReader
 from core.debug_tools.timer import Timer
 from core.debug_tools.fps import FPS
-
 from core.detection.face_embedder import FaceEmbedder
 from core.detection.face_recognizer import FaceRecognizer
 from core.detection.video_camera import VideoCamera
-from core.detection.video_canvas import VideoCanvas
-from core.utils.data import compare_embeddings, load_embeddings_to_dict
+from core.utils.session_id import SessionID
+from core.utils.command import Command
 
-# SERVER SETTINGS
+# SERVER SETTINGS / PATHS
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
-PATH_TO_FACE_DETECTION_MODEL = "./static/models/RFB-640/face_model.pth"
 
 # ML MODELS
 face_embedder = FaceEmbedder()
-face_detector = FaceRecognizer(PATH_TO_FACE_DETECTION_MODEL)
+face_detector = FaceRecognizer()
 
-# COMMUNICATION PIPES
+# COMMUNICATION
 recv_que = ResponseReceiver()
 disp_que = ResponseDispatcher()
 
 # CAMERA SETTINGS
 camera = VideoCamera()
-canvas = VideoCanvas()
-camera_timer = Timer(2)
+camera_timer = Timer(3)
 
 # COMMUNICATION TO REMOTE SERVER
 client = FractalClient("213.161.242.88", 9876, FractalReader())
 client.set_queues(disp_que, recv_que)
 client.init()
-ping_timer = Timer(3)     # CHECK IF REMOTE SERVER IS ALIVE
-is_server_msg_received = False   # TO NOTIFY MSG RECEIVED
-from_server_timer = Timer(5) # HOW LONG TO WAIT FROM SERVER
+time.sleep(.1)
+
+# TEMPORARY STATE MANAGEMENT
+camera_command = Command()
+session_id = SessionID.get()
+# TEMPORARY STATE TIMERS
+is_server_msg_recvd = False      # TO NOTIFY MSG RECEIVED
+entrence_timer = Timer(5)        # HOW LONG TO SIMULATE USER ENTERED 
+server_timer = Timer(5)          # HOW LONG TO WAIT FROM SERVER
+# ping_timer = Timer(60*3)       # CHECK IF REMOTE SERVER IS ALIVE
+
+time.sleep(1)
+# disp_que.add_response({"response_name": "gate_authorization"})
+# recv_que.add_response({"state": "SCANNING"})
 
 
-# TODO: some state management stuff
-current_state = "IDLE"
+@app.on_event("startup")
+def startup_event():
+    # Connect to the server
+    disp_que.add_response({"response_name": "gate_authorization"})
+    # Starts the camera
+    recv_que.add_response({"state": "SCANNING"})
 
-def generateStringUUID():
-    return str(uuid.uuid4())
-
-
-current_session_id = generateStringUUID()
-
-# DEBUG
-DISPLAY_FACE_BOX = False
-
+@app.on_event("shutdown")
+def shutdown_event():
+    client.close_client()
+    # CLEAN FOLDERS
 
 def frame_generator():
-    global current_state
-    global DISPLAY_FACE_BOX
-    
     while True:
-
         frame = camera.get_frame()
         face_boxes = face_detector.predict_faces(frame)
-
         for face_box in face_boxes:
+            cmd = camera_command()
 
-            if current_state == "IDLE":
-                # TODO: What happens here?
+            if cmd == "IDLE":
                 pass
 
-            if current_state == "TEST":
-                ping_timer.start()
-                if ping_timer.is_expired():
-                    disp_que.add_repsonse({"response_name": "gate_ping"})
-                    ping_timer.restart()
-
-            if current_state == "SCANNING":
-                recv_que.add_repsonse({"state": "SCANNING"}) # NOTIFY FRONT END (NB: recv_que)
+            elif cmd == "SCANNING":
                 if VideoCamera.valid_size(face_box):
                     camera_timer.start()
                     if camera_timer.is_expired():
-                        face = camera.get_roi(face_box)
-                        # TODO: Fix TMP Folder
-                        cv2.imwrite("./tmp/imgs/face.jpg", face)
-                        embedding = face_embedder.frame_to_embedding(face)
-                        disp_que.add_response({
-                            "response_name": "user_authorization",
-                            "embedding": embedding.tolist()
-                        })
-                        camera_timer.stop()
-                        # Change state, and wait for validation
-                        current_state = "VALIDATING"
+                        on_process_user(frame, face_box)
+                        server_timer.start()   # reserver response
+                        camera_timer.stop()    # camera trigger
+                        camera_command.reset()
                 else:
                     camera_timer.restart()
-
-            if current_state == "VALIDATING":
-                from_server_timer.start()
-                if from_server_timer.is_expired():
-                    global is_server_msg_received
-                    if not is_server_msg_received:
-                        # TODO: Clear TMP folder
-                        recv_que.add_repsonse({"state": "RESTART"})
-                        current_state = "IDLE"
-                    else:
-                        current_state = "ACCESS"
-                    from_server_timer.stop()
-            
-            if current_state == "ACCESS":
-                # WE WAIT FOR USER TO ENTER THE GATE
-                # SIMULATE WITH LIKE 5 seconds ??
-                # TIMER TO SIMULATE USER HAVE ENTERED ??
-                pass
-
-            if DISPLAY_FACE_BOX:
-                frame = VideoCanvas.draw_rectangle(frame, face_box)
+            # SHOW BBOX AROUND FACE
+            frame = VideoCamera.draw_rectangle(frame, face_box)
 
         frame_bytes = VideoCamera.frame_to_bytes(frame)
         yield (b"--frame\r\nContent-Type:image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
@@ -132,78 +99,75 @@ def frame_generator():
 @app.websocket("/comms")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    global current_state
-    entrence_timer = Timer(5)
+    
     try:
+        global is_server_msg_recvd
         while True:
-            try:
-                data = {"state": "DEFAULT"}
 
+            # Restarts system, if no server response
+            on_server_timer()
+            # Restarts system, if entrence granted 
+            on_entrence_timer()
+
+            display = {"state": "IDLE"}
+
+            try:
                 response = recv_que.get_response()
+                recv_que.confirm_sent()
+
                 state = response["state"]
+                print("[STATE] => ", state)
+                if state == "IDLE":
+                    pass
+
+                if state == "RESTART":
+                    """ RESTART FRONT END"""
+                    display["state"] =  "RESTART"
+                    # TODO: Clear tmp folder or override?
 
                 if state == "SCANNING":
-                    """ SIGNALS CAMERA IS SCANNING"""
-                    data["state"] =  "SCANNING"
+                    display["state"] = "SCANNING"
+                    camera_command.set("SCANNING")
+                    is_server_msg_recvd = False
                     
                 if state == "VALIDATION":
-                    """ STARTS REGISTRATION, or redirects to ACCESS """
-                    data["state"] =  "VALIDATION"
+                    display["state"] =  "VALIDATION"
+                    is_server_msg_recvd = True
                     is_access_granted = response["data"]["access_granted"]
                     if not is_access_granted:
-                        data["access_granted"] = False
-                        data["message"] = response["data"]["message"] # NOT ALLOWS BECAUSE OF CORONA
-                        data["qr_path"] = response["data"]["qr_path"]
+                        sess_id = response["data"]["session_id"]
+                        disp_que.add_response({
+                            "response_name": "user_thumbnail",
+                            "thumbnail_path": "./static/images/tmp/" + sess_id + ".jpg",
+                            "session_id": sess_id
+                        })
+                        # data["message"] = response["data"]["message"] # SHOW or NAH?
+                        display["qr_path"] = response["data"]["qr_path"]
                     else:
                         state = "ACCESS" # Change state
                     
                 if state == "ACCESS":
-                    """ USER CAN NOW ENTER """
-                    data["state"] =  "ACCESS"
-                    data["access_granted"] = True
-                    data["thumbnail_path"] = response["data"]["thumbnail_path"]
-
-                    state = "SIMULATE_GATE_ENTRENCE"
-
-                if state == "SIMULATE_GATE_ENTRENCE":
+                    display["state"] =  "ACCESS"
+                    display["thumbnail_path"] = response["data"]["thumbnail_path"]
+                    # SIMULATE_GATE_ENTRENCE
                     entrence_timer.start()
-                    while True:
-                        if entrence_timer.is_expired():
-                            disp_que.add_response({
-                                "response_name": "user_entered",
-                                "session_id": current_session_id
-                            })
-                            entrence_timer.stop()
-                            break
-
-                        # RESUME SCANNING
-                        state = "RESTART"
 
                 if state == "PONG":
-                    """ SIGNALS THAT THE SERVER RECEIVED OUR PING AND REPONDED """
-                    # TODO: RESET GATE_PING_TIMER, and retry in 3 minutes?
+                    # TODO: implement
+                    # disp_que.add_response({"response_name": "gate_ping"})
                     pass
-                
-                if state == "RESTART":
-                    """ RESTART FRONT END"""
-                    data["state"] =  "RESTART"
-
-                if state == "DEFAULT":
-                    """ NOTHING """
-                    pass
-
-                await websocket.send_json(data)
-                recv_que.confirm_sent()
                 
             except queue.Empty:
                 pass
+            
+            # UPDATE (GUI)
+            await websocket.send_json(display)
+            # NO FREEWHEELING ALLOWED
             await asyncio.sleep(0.015)
+            
     except WebSocketDisconnect:
         await websocket.close(code=1000)
 
-@app.on_event("shutdown")
-def shutdown_event():
-    client.close_client()
 
 @app.get("/frame_streamer")
 async def frame_streamer():
@@ -213,3 +177,41 @@ async def frame_streamer():
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
     return templates.TemplateResponse("indexDEV.html", context={"request": request})
+
+
+""" ---------------------- EVENTS ------------------------ """
+
+def on_server_timer():
+    if server_timer.is_running():
+        if server_timer.is_expired():
+            if not is_server_msg_recvd:
+                recv_que.add_response({"state": "RESTART"})
+            server_timer.stop()
+
+def on_entrence_timer():
+    if entrence_timer.is_running():
+        if entrence_timer.is_expired():
+            # NOTIFY SERVER
+            print("[ENTERED GATE] User_session_id: ", session_id)
+            disp_que.add_response({
+                "response_name": "user_entered",
+                "session_id": session_id
+            })
+            recv_que.add_response({"state": "RESTART"})
+            entrence_timer.stop()
+
+def on_process_user(frame, face_box):
+    # SAVE COPY TO LOCAL TMP FOLDER
+    VideoCamera.save_thumbnail(frame, face_box, session_id)
+    # EXTRACT FACE
+    face_crop = VideoCamera.crop_frame(frame, face_box)
+    # GENERATE EMBEDDING
+    face_emb = face_embedder.frame_to_embedding(face_crop)
+    # TENSOR LIST TO NORMAL LIST
+    face_emb = face_emb.tolist()[0]
+    # SEND TO SERVER
+    disp_que.add_response({
+        "response_name": "user_authorization",
+        "session_id": session_id,
+        "embedding": face_emb
+    })

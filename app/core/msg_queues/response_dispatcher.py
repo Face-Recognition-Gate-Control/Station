@@ -32,7 +32,7 @@ class ResponseDispatcher:
         payload = None
         try:
             response_name = response["response_name"]
-            print(f"SEND: response [type: {response_name}]")
+            print(f"[SEND]: response | type: {response_name}")
 
             if response_name == "gate_authorization":
                 payload = Payload("gate_authorization")

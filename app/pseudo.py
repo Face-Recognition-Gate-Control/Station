@@ -7,6 +7,31 @@ import torch
 face_detector = None
 face_embedder = None
 
+
+""" PAYLOAD TESTS """
+# [gate_authorization]   Success
+# [user_authorization]   Success
+# [user_unidentified]    Success
+# [user_identified]      Success
+# [gate_ping / pong]     Success
+
+""" OTHER TEST """
+# (show QR.jpg )         Success
+# (show thumgnail.jpg)   Success
+# (website registration) Success      
+
+""" NOT STARTED """
+# {simulate user entrence}
+
+
+
+
+
+
+
+
+
+
 """ COMMUNICATION """
 client = None
 recv_que = None
