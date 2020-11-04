@@ -39,7 +39,8 @@ camera = VideoCamera()
 camera_timer = Timer(3)
 
 # COMMUNICATION TO REMOTE SERVER
-client = FractalClient("213.161.242.88", 9876, FractalReader())
+#213.161.242.88
+client = FractalClient("10.22.180.90", 9876, FractalReader())
 client.set_queues(disp_que, recv_que)
 client.init()
 time.sleep(.1)
@@ -51,12 +52,15 @@ session_id = SessionID.get()
 is_server_msg_recvd = False      # TO NOTIFY MSG RECEIVED
 entrence_timer = Timer(5)        # HOW LONG TO SIMULATE USER ENTERED 
 server_timer = Timer(5)          # HOW LONG TO WAIT FROM SERVER
+qr_timer = Timer(10)          # HOW LONG TO WAIT FROM SERVER
+
 # ping_timer = Timer(60*3)       # CHECK IF REMOTE SERVER IS ALIVE
 
 time.sleep(1)
 # disp_que.add_response({"response_name": "gate_authorization"})
 # recv_que.add_response({"state": "SCANNING"})
 
+global_timer = None
 
 @app.on_event("startup")
 def startup_event():
@@ -71,9 +75,11 @@ def shutdown_event():
     # CLEAN FOLDERS
 
 def frame_generator():
+    global global_timer
     while True:
         frame = camera.get_frame()
         face_boxes = face_detector.predict_faces(frame)
+        
         for face_box in face_boxes:
             cmd = camera_command()
 
@@ -85,6 +91,7 @@ def frame_generator():
                     camera_timer.start()
                     if camera_timer.is_expired():
                         on_process_user(frame, face_box)
+                        global_timer = time.time()
                         server_timer.start()   # reserver response
                         camera_timer.stop()    # camera trigger
                         camera_command.reset()
@@ -102,12 +109,16 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         global is_server_msg_recvd
+        global session_id
+        global global_timer
         while True:
 
             # EVENT RESTARTS: if no server response
             on_server_timer()
             # EVENT RESTARTS: if entrence granted 
             on_entrence_timer()
+            # EVENT RESTARTS: if qr has been opened 
+            on_qr_timer()
 
             display = {"state": "IDLE"}
 
@@ -123,6 +134,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 if state == "RESTART":
                     """ RESTART FRONT END"""
                     display["state"] =  "RESTART"
+                    session_id = SessionID.get()
+                    # Begin scanning again
+                    recv_que.add_response({"state": "SCANNING"})
                     # TODO: Clear tmp folder or override?
 
                 if state == "SCANNING":
@@ -134,15 +148,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     display["state"] =  "VALIDATION"
                     is_server_msg_recvd = True
                     is_access_granted = response["data"]["access_granted"]
+                    session_id = response["data"]["session_id"]
+                    t = time.time() - global_timer
+                    print("VALIDATION TIME TOOK: ", t)
                     if not is_access_granted:
-                        sess_id = response["data"]["session_id"]
                         disp_que.add_response({
                             "response_name": "user_thumbnail",
-                            "thumbnail_path": "./static/images/tmp/" + sess_id + ".jpg",
-                            "session_id": sess_id
+                            "thumbnail_path": "./static/images/tmp/" + session_id + ".jpg",
+                            "session_id": session_id
                         })
                         # data["message"] = response["data"]["message"] # SHOW or NAH?
                         display["qr_path"] = response["data"]["qr_path"]
+                        qr_timer.start()
                     else:
                         state = "ACCESS" # Change state
                     
@@ -187,6 +204,12 @@ def on_server_timer():
             if not is_server_msg_recvd:
                 recv_que.add_response({"state": "RESTART"})
             server_timer.stop()
+            
+def on_qr_timer():
+    if qr_timer.is_running():
+        if qr_timer.is_expired():
+            recv_que.add_response({"state": "RESTART"})
+            qr_timer.stop()
 
 def on_entrence_timer():
     if entrence_timer.is_running():

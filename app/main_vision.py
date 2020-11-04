@@ -32,7 +32,7 @@ if __name__ == "__main__":
     canvas = VideoCanvas()
 
     # face_embedder = FaceEmbedder()
-    face_detector = FaceRecognizer(PATH_TO_FACE_DETECTION_MODEL)
+    face_detector = FaceRecognizer()
 
     # " DATABASE "
     # embeddings = load_embeddings_to_dict(PATH_TO_ANCHORS)
@@ -49,9 +49,9 @@ if __name__ == "__main__":
         face_boxes = face_detector.predict_faces(frame)
 
         for face_box in face_boxes:
-            if VideoCamera.valid_size(face_box):
+            # if VideoCamera.valid_size(face_box):
                 # face = camera.get_roi(face_box)
-                frame = VideoCamera.draw_rectangle(frame, face_box)
+            frame = VideoCamera.draw_rectangle(frame, face_box)
 
         canvas.display_frame(frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):

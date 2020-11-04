@@ -61,7 +61,6 @@ const ws = new WebSocket("ws://localhost:8000/comms");
 
 ws.onmessage = function(event) {
   var data = JSON.parse(event.data);
-  console.log(state)
 
   var state = data.state;
 
