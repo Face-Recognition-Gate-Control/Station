@@ -48,19 +48,12 @@ time.sleep(.1)
 # TEMPORARY STATE MANAGEMENT
 camera_command = Command()
 session_id = SessionID.get()
-# TEMPORARY STATE TIMERS
 is_server_msg_recvd = False      # TO NOTIFY MSG RECEIVED
 entrence_timer = Timer(5)        # HOW LONG TO SIMULATE USER ENTERED 
 server_timer = Timer(5)          # HOW LONG TO WAIT FROM SERVER
-qr_timer = Timer(10)          # HOW LONG TO WAIT FROM SERVER
-
-# ping_timer = Timer(60*3)       # CHECK IF REMOTE SERVER IS ALIVE
-
+qr_timer = Timer(10)             # HOW LONG TO WAIT FROM SERVER
 time.sleep(1)
-# disp_que.add_response({"response_name": "gate_authorization"})
-# recv_que.add_response({"state": "SCANNING"})
 
-global_timer = None
 
 @app.on_event("startup")
 def startup_event():
@@ -75,7 +68,6 @@ def shutdown_event():
     # CLEAN FOLDERS
 
 def frame_generator():
-    global global_timer
     while True:
         frame = camera.get_frame()
         face_boxes = face_detector.predict_faces(frame)
@@ -91,7 +83,6 @@ def frame_generator():
                     camera_timer.start()
                     if camera_timer.is_expired():
                         on_process_user(frame, face_box)
-                        global_timer = time.time()
                         server_timer.start()   # reserver response
                         camera_timer.stop()    # camera trigger
                         camera_command.reset()
@@ -106,7 +97,6 @@ def frame_generator():
 @app.websocket("/comms")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    
     try:
         global is_server_msg_recvd
         global session_id
@@ -149,8 +139,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     is_server_msg_recvd = True
                     is_access_granted = response["data"]["access_granted"]
                     session_id = response["data"]["session_id"]
-                    t = time.time() - global_timer
-                    print("VALIDATION TIME TOOK: ", t)
                     if not is_access_granted:
                         disp_que.add_response({
                             "response_name": "user_thumbnail",
@@ -193,7 +181,7 @@ async def frame_streamer():
 
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
-    return templates.TemplateResponse("indexDEV.html", context={"request": request})
+    return templates.TemplateResponse("index.html", context={"request": request})
 
 
 """ ---------------------- EVENT HANDLERS ------------------------ """

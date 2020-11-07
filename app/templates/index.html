@@ -1,5 +1,4 @@
 {% extends "layout.html" %}
-
 {% block content %}
 
 <script>
@@ -57,19 +56,47 @@ function enableStep(stepID) {
   }
 };
 
+// RECEIVE COMMANDS FROM SERVER
 const ws = new WebSocket("ws://localhost:8000/comms");
 
 ws.onmessage = function(event) {
   var data = JSON.parse(event.data);
-  console.log(data)
-  
-  if ("thumbnail_path" in data) {
-    var thumbnailFaceImage = data.thumbnail_path;
-    changeThumbnailDisplay(thumbnailFaceImage);
-  }
-  if ("qr_path" in data) {
-    changeThumbnailDisplay(thumbnailFaceImage);
-    changeThumbnailDisplay("./static/images/tmp/qr.jpg");
+
+  var state = data.state;
+
+  switch (state) {
+
+    case "IDLE":
+      // pass
+      break;
+
+    case "SCANNING":
+      console.log("[STATE] => ", state)
+      enableStep(1);
+      break;
+
+    case "VALIDATION":
+      console.log("[STATE] => ", state)
+      var qrCodeImage = data.qr_path;
+      changeThumbnailDisplay(qrCodeImage);
+      enableStep(2);
+      break;
+
+    case "ACCESS":
+      console.log("[STATE] => ", state)
+      var thumbnailFaceImage = data.thumbnail_path;
+      changeThumbnailDisplay(thumbnailFaceImage);
+      enableStep(2);
+      enableStep(3);
+      break;
+
+    case "RESTART":
+      console.log("[STATE] => ", state)
+      resetSystem(); 
+      break;
+    
+    default:
+      break;
   }
 
 };
@@ -77,39 +104,39 @@ ws.onmessage = function(event) {
 </script>
 
 <h2 class="ui center aligned icon header">
-    We See You.
+  We See You.
 </h2>
 
 <div class="ui big three steps">
-    <div id="step1" class="step">
-      <i class="eye icon"></i>
-      <div class="content">
-        <div class="title">Scanning</div>
-      </div>
+  <div id="step1" class="step">
+    <i class="eye icon"></i>
+    <div class="content">
+      <div class="title">Scanning</div>
     </div>
-    <div id="step2" class="step">
-      <i class="hourglass end icon"></i>
-      <div class="content">
-        <div class="title">Validating</div>
-      </div>
+  </div>
+  <div id="step2" class="step">
+    <i class="hourglass end icon"></i>
+    <div class="content">
+      <div class="title">Validating</div>
     </div>
-    <div id="step3" class="step">
-      <i class="user icon"></i>
-      <div class="content">
-        <div class="title">Access</div>
-      </div>
+  </div>
+  <div id="step3" class="step">
+    <i class="user icon"></i>
+    <div class="content">
+      <div class="title">Access</div>
     </div>
+  </div>
 </div>
 
 <div class="ui container center aligned page">
-  <img id="main_display" class="ui main image centered" src="{{ url_for('frame_streamer') }}" alt=/>
-  {# <img id="main_display" class="ui main image centered" src="/static/images/frontend/test.png">   #}
+<img id="main_display" class="ui main image centered" src="{{ url_for('frame_streamer') }}" alt=/>
+{# <img id="main_display" class="ui main image centered" src="/static/images/frontend/test.png">   #}
 </div>
 
 <h4 class="ui horizontal inverted divider"></h4>
 
 <div class="ui container center aligned page">
-  <img id="thumbnail" class="ui main image centered" src="/static/images/frontend/thumbnail.png">
+<img id="thumbnail" class="ui main image centered" src="/static/images/frontend/thumbnail.png">
 </div>
 
 
@@ -118,17 +145,16 @@ ws.onmessage = function(event) {
 
 {#
 <div class="ui container center aligned page">
-  <button onclick="testAll()" class="ui red button">
-    <h3>TEST ALL</h3>
-  </button>
+<button onclick="testAll()" class="ui red button">
+  <h3>TEST ALL</h3>
+</button>
 </div>
 
 <div class="ui container center aligned page">
-  <button onclick="resetSystem()" class="ui yellow button">
-    <h3>ENTER</h3>
-  </button>
+<button onclick="resetSystem()" class="ui yellow button">
+  <h3>ENTER</h3>
+</button>
 </div>
 #}
-
 
 {% endblock %}
