@@ -14,3 +14,8 @@ Begin with installing a compatible version of OpenCV & Torch, then
 pip install -r requirements.txt
 ```
 
+## Init
+```python
+# cd app and change host
+python3 uvicorn main:app --host X.X.X.X
+```
